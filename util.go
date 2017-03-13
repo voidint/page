@@ -22,27 +22,3 @@ func calcTotalPages(pageSize, totalRecords int64) (totalPages int64, err error) 
 	}
 	return totalPages, nil
 }
-
-func calcOffset(page, pageSize, totalRecords int64) (offset int64, err error) {
-	if page <= 0 {
-		return 0, errors.New("page number should be positive integer")
-	}
-
-	if pageSize <= 0 {
-		return 0, errors.New("page size should be positive integer")
-	}
-
-	if totalRecords < 0 {
-		return 0, errors.New("total records should not be negative integer")
-	}
-
-	totalPages, err := calcTotalPages(pageSize, totalRecords)
-	if err != nil {
-		return 0, err
-	}
-
-	if totalPages > 0 && page > totalPages {
-		page = totalPages
-	}
-	return (page - 1) * pageSize, nil
-}

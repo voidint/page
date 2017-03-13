@@ -27,25 +27,49 @@ func TestPager(t *testing.T) {
 
 		})
 		Convey("Valid parameters", func() {
-			totalRecords, _ := countUsers()
-			pager := NewPager(reflect.TypeOf(User{}), 2, 3, totalRecords)
-			limiter := pager.BuildLimiter()
-			users, _ := getUsersFromDB(limiter.Offset, limiter.Limit)
-			for i := range users {
-				pager.AddRecords(users[i])
-			}
-			So(pager.AddRecords(&User{}), ShouldNotBeNil)
+			Convey("Page number less than or equal total pages", func() {
+				totalRecords, _ := countUsers()        // 10
+				pageNo, pageSize := int64(2), int64(3) // 2 <= 4
 
-			page := pager.BuildPage()
-			So(page, ShouldNotBeNil)
-			So(page.Page, ShouldEqual, 2)
-			So(page.PageSize, ShouldEqual, 3)
-			So(page.TotalPages, ShouldEqual, 4)
-			So(page.TotalRecords, ShouldEqual, totalRecords)
-			So(len(page.Records), ShouldEqual, 3)
-			So(page.Records[0].(User).Name, ShouldEqual, "user3")
-			So(page.Records[1].(User).Name, ShouldEqual, "user4")
-			So(page.Records[2].(User).Name, ShouldEqual, "user5")
+				pager := NewPager(reflect.TypeOf(User{}), pageNo, pageSize, totalRecords)
+				limiter := pager.BuildLimiter()
+				users, _ := getUsersFromDB(limiter.Offset, limiter.Limit)
+				for i := range users {
+					pager.AddRecords(users[i])
+				}
+				So(pager.AddRecords(&User{}), ShouldNotBeNil)
+
+				page := pager.BuildPage()
+				So(page, ShouldNotBeNil)
+				So(page.Page, ShouldEqual, pageNo)
+				So(page.PageSize, ShouldEqual, pageSize)
+				So(page.TotalPages, ShouldEqual, 4)
+				So(page.TotalRecords, ShouldEqual, totalRecords)
+				So(len(page.Records), ShouldEqual, pageSize)
+				So(page.Records[0].(User).Name, ShouldEqual, "user3")
+				So(page.Records[1].(User).Name, ShouldEqual, "user4")
+				So(page.Records[2].(User).Name, ShouldEqual, "user5")
+			})
+
+			Convey("Page number greater than total pages", func() {
+				totalRecords, _ := countUsers()        // 10
+				pageNo, pageSize := int64(5), int64(3) // 5 > 4
+
+				pager := NewPager(reflect.TypeOf(User{}), pageNo, pageSize, totalRecords)
+				limiter := pager.BuildLimiter()
+				users, _ := getUsersFromDB(limiter.Offset, limiter.Limit)
+				for i := range users {
+					pager.AddRecords(users[i])
+				}
+
+				page := pager.BuildPage()
+				So(page, ShouldNotBeNil)
+				So(page.Page, ShouldEqual, pageNo)
+				So(page.PageSize, ShouldEqual, pageSize)
+				So(page.TotalPages, ShouldEqual, 4)
+				So(page.TotalRecords, ShouldEqual, totalRecords)
+				So(page.Records, ShouldBeEmpty)
+			})
 		})
 	})
 }
@@ -71,7 +95,9 @@ func getUsersFromDB(offset, limit int64) (users []User, err error) {
 		{Name: "user8"},
 		{Name: "user9"},
 	}
-
+	if offset < 0 || (offset+limit) > int64(len(all)) {
+		return []User{}, nil
+	}
 	return all[offset : offset+limit], nil
 }
 

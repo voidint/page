@@ -64,10 +64,9 @@ type pagerImpl struct {
 }
 
 func (p *pagerImpl) BuildLimiter() *Limiter {
-	offset, _ := calcOffset(p.page, p.pageSize, p.totalRecords)
 	return &Limiter{
 		Limit:  p.pageSize,
-		Offset: offset,
+		Offset: (p.page - 1) * p.pageSize,
 	}
 }
 
