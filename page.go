@@ -5,36 +5,36 @@ import (
 	"reflect"
 )
 
+// Limiter database limit clause in MySQL.
+//
+// eg. SELECT * FROM `user` LIMIT 0,2
+//
+// eg. SELECT * FROM `user` LIMIT 2 OFFSET 0
 type Limiter struct {
 	Offset int64
 	Limit  int64
 }
 
-// Page pagination struct
+// Page business layer pagination struct.
 type Page struct {
-	Page         int64         `json:"Page"`
+	Page         int64         `json:"Page"` // page number
 	PageSize     int64         `json:"PageSize"`
 	TotalPages   int64         `json:"TotalPages"`
 	TotalRecords int64         `json:"TotalRecords"`
 	Records      []interface{} `json:"Records"`
 }
 
-// Pager pagination interface
+// Pager business layer pagination interface.
 type Pager interface {
+	// BuildLimiter get database limit clause for data access layer.
 	BuildLimiter() *Limiter
+	// AddRecords append record to collection.
 	AddRecords(records ...interface{}) error
+	// BuildPage get page object for serialization.
 	BuildPage() *Page
 }
 
-type pagerImpl struct {
-	page         int64
-	pageSize     int64
-	totalPages   int64
-	totalRecords int64
-	records      []interface{}
-	elemType     reflect.Type
-}
-
+// NewPager return business layer pagination instance.
 func NewPager(elemType reflect.Type, page, pageSize, totalRecords int64) Pager {
 	if page <= 0 {
 		page = 1
@@ -52,6 +52,15 @@ func NewPager(elemType reflect.Type, page, pageSize, totalRecords int64) Pager {
 		records:      make([]interface{}, 0, pageSize),
 		elemType:     elemType,
 	}
+}
+
+type pagerImpl struct {
+	page         int64
+	pageSize     int64
+	totalPages   int64
+	totalRecords int64
+	records      []interface{}
+	elemType     reflect.Type
 }
 
 func (p *pagerImpl) BuildLimiter() *Limiter {
@@ -86,6 +95,7 @@ func (p *pagerImpl) BuildPage() *Page {
 	}
 }
 
+// EmptyPage return empty record object.
 func EmptyPage(page, pageSize int64) *Page {
 	return &Page{
 		Page:         page,

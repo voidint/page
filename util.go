@@ -2,13 +2,6 @@ package page
 
 import "errors"
 
-var (
-	// ErrDivideByZero divide by zero error
-	ErrDivideByZero = errors.New("divide by zero")
-	// ErrNonPositiveInteger invalid parameter error
-	ErrNonPositiveInteger = errors.New("invalid non-positive integer parameter")
-)
-
 func calcTotalPages(pageSize, totalRecords int64) (totalPages int64, err error) {
 	if pageSize <= 0 {
 		return 0, errors.New("page size should be positive integer")
