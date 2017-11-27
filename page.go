@@ -17,11 +17,11 @@ type Limiter struct {
 
 // Page business layer pagination struct.
 type Page struct {
-	Page         int64         `json:"Page"` // page number
-	PageSize     int64         `json:"PageSize"`
-	TotalPages   int64         `json:"TotalPages"`
-	TotalRecords int64         `json:"TotalRecords"`
-	Records      []interface{} `json:"Records"`
+	Page         int64         `json:"page"` // page number
+	PageSize     int64         `json:"page_size"`
+	TotalPages   int64         `json:"total_pages"`
+	TotalRecords int64         `json:"total_records"`
+	Records      []interface{} `json:"records"`
 }
 
 // Pager business layer pagination interface.
