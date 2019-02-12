@@ -42,6 +42,13 @@ func NewPager(elemType reflect.Type, page, pageSize, totalRecords int64) Pager {
 	if pageSize <= 0 {
 		pageSize = 10
 	}
+	if totalRecords < 0 {
+		totalRecords = 0
+	}
+	capacity := pageSize
+	if pageSize > totalRecords {
+		capacity = totalRecords
+	}
 
 	totalPages, _ := calcTotalPages(pageSize, totalRecords)
 	return &pagerImpl{
@@ -49,7 +56,7 @@ func NewPager(elemType reflect.Type, page, pageSize, totalRecords int64) Pager {
 		pageSize:     pageSize,
 		totalPages:   totalPages,
 		totalRecords: totalRecords,
-		records:      make([]interface{}, 0, pageSize),
+		records:      make([]interface{}, 0, capacity),
 		elemType:     elemType,
 	}
 }
