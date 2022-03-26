@@ -1,7 +1,6 @@
 package page
 
 import (
-	"reflect"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -11,7 +10,7 @@ func TestPager(t *testing.T) {
 	Convey("Business layer pagination", t, func() {
 		Convey("Invalid parameters and use default value", func() {
 			totalRecords, _ := countUsers()
-			pager := NewPager(reflect.TypeOf(&User{}), -1, -1, totalRecords)
+			pager := NewPager[*User](-1, -1, totalRecords)
 			limiter := pager.BuildLimiter()
 			users, _ := getUsersFromDB(limiter.Offset, limiter.Limit)
 			for i := range users {
@@ -19,7 +18,7 @@ func TestPager(t *testing.T) {
 			}
 			page := pager.BuildPage()
 			So(page, ShouldNotBeNil)
-			So(page.Page, ShouldEqual, 1)
+			So(page.PageNo, ShouldEqual, 1)
 			So(page.PageSize, ShouldEqual, 10)
 			So(page.TotalPages, ShouldEqual, 1)
 			So(page.TotalRecords, ShouldEqual, totalRecords)
@@ -31,40 +30,35 @@ func TestPager(t *testing.T) {
 				totalRecords, _ := countUsers()        // 10
 				pageNo, pageSize := int64(2), int64(3) // 2 <= 4
 
-				pager := NewPager(reflect.TypeOf(User{}), pageNo, pageSize, totalRecords)
+				pager := NewPager[User](pageNo, pageSize, totalRecords)
 				limiter := pager.BuildLimiter()
 				users, _ := getUsersFromDB(limiter.Offset, limiter.Limit)
-				for i := range users {
-					pager.AddRecords(users[i])
-				}
-				So(pager.AddRecords(&User{}), ShouldNotBeNil)
+				pager.AddRecords(users...)
 
 				page := pager.BuildPage()
 				So(page, ShouldNotBeNil)
-				So(page.Page, ShouldEqual, pageNo)
+				So(page.PageNo, ShouldEqual, pageNo)
 				So(page.PageSize, ShouldEqual, pageSize)
 				So(page.TotalPages, ShouldEqual, 4)
 				So(page.TotalRecords, ShouldEqual, totalRecords)
 				So(len(page.Records), ShouldEqual, pageSize)
-				So(page.Records[0].(User).Name, ShouldEqual, "user3")
-				So(page.Records[1].(User).Name, ShouldEqual, "user4")
-				So(page.Records[2].(User).Name, ShouldEqual, "user5")
+				So(page.Records[0].Name, ShouldEqual, "user3")
+				So(page.Records[1].Name, ShouldEqual, "user4")
+				So(page.Records[2].Name, ShouldEqual, "user5")
 			})
 
 			Convey("Page number greater than total pages", func() {
 				totalRecords, _ := countUsers()        // 10
 				pageNo, pageSize := int64(5), int64(3) // 5 > 4
 
-				pager := NewPager(reflect.TypeOf(User{}), pageNo, pageSize, totalRecords)
+				pager := NewPager[User](pageNo, pageSize, totalRecords)
 				limiter := pager.BuildLimiter()
 				users, _ := getUsersFromDB(limiter.Offset, limiter.Limit)
-				for i := range users {
-					pager.AddRecords(users[i])
-				}
+				pager.AddRecords(users...)
 
 				page := pager.BuildPage()
 				So(page, ShouldNotBeNil)
-				So(page.Page, ShouldEqual, pageNo)
+				So(page.PageNo, ShouldEqual, pageNo)
 				So(page.PageSize, ShouldEqual, pageSize)
 				So(page.TotalPages, ShouldEqual, 4)
 				So(page.TotalRecords, ShouldEqual, totalRecords)
@@ -103,9 +97,9 @@ func getUsersFromDB(offset, limit int64) (users []User, err error) {
 
 func TestEmptyPage(t *testing.T) {
 	Convey("Empty page", t, func() {
-		page := EmptyPage(1, 10)
+		page := EmptyPage[string](1, 10)
 		So(page, ShouldNotBeNil)
-		So(page.Page, ShouldEqual, 1)
+		So(page.PageNo, ShouldEqual, 1)
 		So(page.PageSize, ShouldEqual, 10)
 		So(page.TotalPages, ShouldEqual, 0)
 		So(page.TotalRecords, ShouldEqual, 0)

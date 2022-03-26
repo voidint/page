@@ -1,43 +1,43 @@
 package page
 
-import (
-	"fmt"
-	"reflect"
-)
+// Integer Integer type constraints
+type Integer interface {
+	int | int64 | uint | uint64
+}
 
 // Limiter database limit clause in MySQL.
 //
 // eg. SELECT * FROM `user` LIMIT 0,2
 //
 // eg. SELECT * FROM `user` LIMIT 2 OFFSET 0
-type Limiter struct {
-	Offset int64
-	Limit  int64
+type Limiter[INT Integer] struct {
+	Offset INT
+	Limit  INT
 }
 
 // Page business layer pagination struct.
-type Page struct {
-	Page         int64         `json:"page"` // page number
-	PageSize     int64         `json:"page_size"`
-	TotalPages   int64         `json:"total_pages"`
-	TotalRecords int64         `json:"total_records"`
-	Records      []interface{} `json:"records"`
+type Page[T any, INT Integer] struct {
+	PageNo       INT `json:"page_no"`
+	PageSize     INT `json:"page_size"`
+	TotalPages   INT `json:"total_pages"`
+	TotalRecords INT `json:"total_records"`
+	Records      []T `json:"records"`
 }
 
 // Pager business layer pagination interface.
-type Pager interface {
+type Pager[T any, INT Integer] interface {
 	// BuildLimiter get database limit clause for data access layer.
-	BuildLimiter() *Limiter
+	BuildLimiter() *Limiter[INT]
 	// AddRecords append record to collection.
-	AddRecords(records ...interface{}) error
+	AddRecords(records ...T)
 	// BuildPage get page object for serialization.
-	BuildPage() *Page
+	BuildPage() *Page[T, INT]
 }
 
 // NewPager return business layer pagination instance.
-func NewPager(elemType reflect.Type, page, pageSize, totalRecords int64) Pager {
-	if page <= 0 {
-		page = 1
+func NewPager[T any, INT Integer](pageNo, pageSize, totalRecords INT) Pager[T, INT] {
+	if pageNo <= 0 {
+		pageNo = 1
 	}
 	if pageSize <= 0 {
 		pageSize = 10
@@ -50,50 +50,56 @@ func NewPager(elemType reflect.Type, page, pageSize, totalRecords int64) Pager {
 		capacity = totalRecords
 	}
 
-	totalPages, _ := calcTotalPages(pageSize, totalRecords)
-	return &pagerImpl{
-		page:         page,
+	return &pagerImpl[T, INT]{
+		pageNo:       pageNo,
 		pageSize:     pageSize,
-		totalPages:   totalPages,
 		totalRecords: totalRecords,
-		records:      make([]interface{}, 0, capacity),
-		elemType:     elemType,
+		totalPages:   mustCalculateTotalPages(pageSize, totalRecords),
+		records:      make([]T, 0, capacity),
 	}
 }
 
-type pagerImpl struct {
-	page         int64
-	pageSize     int64
-	totalPages   int64
-	totalRecords int64
-	records      []interface{}
-	elemType     reflect.Type
+func mustCalculateTotalPages[INT Integer](pageSize, totalRecords INT) (totalPages INT) {
+	if pageSize <= 0 {
+		panic("page size should be positive integer")
+	}
+
+	if totalRecords < 0 {
+		panic("total records should not be negative integer")
+	}
+
+	if totalRecords == 0 {
+		return 0
+	}
+
+	if totalRecords%pageSize == 0 {
+		return totalRecords / pageSize
+	}
+	return totalRecords/pageSize + 1
 }
 
-func (p *pagerImpl) BuildLimiter() *Limiter {
-	return &Limiter{
+type pagerImpl[T any, INT Integer] struct {
+	pageNo       INT
+	pageSize     INT
+	totalPages   INT
+	totalRecords INT
+	records      []T
+}
+
+func (p *pagerImpl[T, INT]) BuildLimiter() *Limiter[INT] {
+	return &Limiter[INT]{
 		Limit:  p.pageSize,
-		Offset: (p.page - 1) * p.pageSize,
+		Offset: (p.pageNo - 1) * p.pageSize,
 	}
 }
 
-func (p *pagerImpl) isAcceptableElem(k interface{}) bool {
-	return reflect.TypeOf(k) == p.elemType
-}
-
-func (p *pagerImpl) AddRecords(records ...interface{}) error {
-	for _, record := range records {
-		if !p.isAcceptableElem(record) {
-			return fmt.Errorf("invalid element: %#v", record)
-		}
-	}
+func (p *pagerImpl[T, INT]) AddRecords(records ...T) {
 	p.records = append(p.records, records...)
-	return nil
 }
 
-func (p *pagerImpl) BuildPage() *Page {
-	return &Page{
-		Page:         p.page,
+func (p *pagerImpl[T, INT]) BuildPage() *Page[T, INT] {
+	return &Page[T, INT]{
+		PageNo:       p.pageNo,
 		PageSize:     p.pageSize,
 		TotalPages:   p.totalPages,
 		TotalRecords: p.totalRecords,
@@ -102,12 +108,12 @@ func (p *pagerImpl) BuildPage() *Page {
 }
 
 // EmptyPage return empty record object.
-func EmptyPage(page, pageSize int64) *Page {
-	return &Page{
-		Page:         page,
+func EmptyPage[T any, INT Integer](pageNo, pageSize INT) *Page[T, INT] {
+	return &Page[T, INT]{
+		PageNo:       pageNo,
 		PageSize:     pageSize,
 		TotalPages:   0,
 		TotalRecords: 0,
-		Records:      make([]interface{}, 0),
+		Records:      make([]T, 0),
 	}
 }
