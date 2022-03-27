@@ -1,9 +1,11 @@
 package page
 
+import (
+	"golang.org/x/exp/constraints"
+)
+
 // Integer Integer type constraints
-type Integer interface {
-	int | int64 | uint | uint64
-}
+type Integer constraints.Integer
 
 // Limiter database limit clause in MySQL.
 //
